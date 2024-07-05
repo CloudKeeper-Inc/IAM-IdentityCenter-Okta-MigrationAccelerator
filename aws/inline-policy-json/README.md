@@ -1,0 +1,1 @@
+Paste SAML metadata files in this directory.
