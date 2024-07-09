@@ -29,7 +29,8 @@ def upload_account_ids_to_s3(account_ids, bucket_name):
 def get_sso_instance_arn(client):
     instance_info = client.list_instances()
     instance_arn = instance_info['Instances'][0]['InstanceArn']
-    return instance_arn
+    instance_id = instance_info['Instances'][0]['IdentityStoreId']
+    return instance_arn, instance_id
 
 
 def underscore_remover(name):
@@ -134,13 +135,13 @@ def upload_custom_policy_to_s3(permission_sets_arns, bucket_name , account_id, c
 
 
 def permission_sets_name(client, permission_sets_arns, instance_arn):
-    permission_sets = []
+    permission_sets = {}
     for permission_set in permission_sets_arns:
         response = client.describe_permission_set(
             InstanceArn=instance_arn,
             PermissionSetArn=permission_set
         )
-        permission_sets.append(response['PermissionSet']['Name'])
+        permission_sets[response['PermissionSet']['Name']] = permission_set
 
     return permission_sets
 
@@ -187,6 +188,28 @@ def create_config_json(permission_sets_map, account_ids):
     config = config.replace("'",'"')
 
     config = json.loads(config)
-    file_name = 'extracted-data/' + 'config' + '.json'
+    file_name = 'config' + '.json'
     with open(file_name, 'w') as outfile:
         json.dump(config, outfile, indent=4)
+
+
+def generate_locals_tf(data, file_path='okta/locals.tf'):
+    with open(file_path, 'w') as file:
+        file.write('locals {\n')
+        file.write('  aws_roles = {\n')
+
+        for key, value in data.items():
+            file.write(f'    "{key}" = ')
+            if isinstance(value, list) and value:
+                file.write('[\n')
+                for item in value:
+                    file.write('      {\n')
+                    for sub_key, sub_value in item.items():
+                        file.write(f'        {sub_key} = "{sub_value}"\n')
+                    file.write('      },\n')
+                file.write('    ]\n')
+            else:
+                file.write('[]\n')
+        
+        file.write('  }\n')
+        file.write('}\n')

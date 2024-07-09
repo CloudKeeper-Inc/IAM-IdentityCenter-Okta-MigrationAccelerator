@@ -20,13 +20,15 @@ account_ids = get_account_list(org_client)
 upload_account_ids_to_s3(account_ids, bucket_name)
 
 sso_admin_client = boto3.client('sso-admin', region_name = region)
+identity_store_client = boto3.client('identitystore', region_name = region)
 
-instance_arn = get_sso_instance_arn(sso_admin_client)
+instance_arn, instance_id = get_sso_instance_arn(sso_admin_client)
 
 
 csv_headers = ['Saml_Provider_Name', 'Role_Name', 'Attached_Managed_Policies', 'Customer_Managed_Policies', 'Inline_Policy','IdPMetadataFileName']
 
 permission_sets_map = {}
+okta_group_role_map = {}
 
 for account_id in account_ids:
     sso_data = []
@@ -36,19 +38,58 @@ for account_id in account_ids:
             
             sso_data = get_sso_account_data(permission_sets_arns, account_id, sso_admin_client, instance_arn)
 
-            for item in permission_sets_name(sso_admin_client, permission_sets['PermissionSets'], instance_arn):
-                if item not in permission_sets_map:
-                    permission_sets_map[item] = {"account_id": [], "Attached_Managed_Policies": [], "Customer_Managed_Policies": [], "Inline_Policy": ''}
-                permission_sets_map[item]["account_id"].append(account_id)
+            permission_sets_names = permission_sets_name(sso_admin_client, permission_sets['PermissionSets'], instance_arn)
+            for name in permission_sets_names:
+                if name not in permission_sets_map:
+                    permission_sets_map[name] = {"account_id": [], "Attached_Managed_Policies": [], "Customer_Managed_Policies": [], "Inline_Policy": ''}
+                permission_sets_map[name]["account_id"].append(account_id)
                 for sso_entry in sso_data:
-                    if sso_entry["Role_Name"] == item:
-                        permission_sets_map[item]["Attached_Managed_Policies"] = sso_entry["Attached_Managed_Policies"]
-                        permission_sets_map[item]["Customer_Managed_Policies"] = sso_entry["Customer_Managed_Policies"]
+                    if sso_entry["Role_Name"] == name:
+                        permission_sets_map[name]["Attached_Managed_Policies"] = sso_entry["Attached_Managed_Policies"]
+                        permission_sets_map[name]["Customer_Managed_Policies"] = sso_entry["Customer_Managed_Policies"]
                         if sso_entry["Inline_Policy"] == 'No':
-                            permission_sets_map[item]["Inline_Policy"] = ''
+                            permission_sets_map[name]["Inline_Policy"] = ''
                         else:
-                            permission_sets_map[item]["Inline_Policy"] = sso_entry["Inline_Policy"]
+                            permission_sets_map[name]["Inline_Policy"] = sso_entry["Inline_Policy"]
                         break
+
+                response = sso_admin_client.list_account_assignments(
+                    AccountId=account_id,
+                    InstanceArn=instance_arn,
+                    MaxResults=100,
+                    PermissionSetArn=permission_sets_names[name]
+                )
+                if len(response) > 1:
+                    for assignment in response['AccountAssignments']:
+                        if f'aws#{name}#{assignment["AccountId"]}' not in okta_group_role_map: 
+                            # okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}'] = {'group': [], 'user': set(), 'account_id': ''}
+                            okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}'] = []
+                        # okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}']['account_id'] = assignment['AccountId']
+                        if assignment['PrincipalType'] == 'GROUP':
+                            # okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}']['group'].append(assignment['PrincipalId'])
+                            group_memberships = identity_store_client.list_group_memberships(
+                                IdentityStoreId=instance_id,
+                                GroupId=assignment['PrincipalId'],
+                                MaxResults=100
+                            )
+                            if len(group_memberships) > 1:
+                                for member in group_memberships['GroupMemberships']:
+                                    user_desc = identity_store_client.describe_user(
+                                        IdentityStoreId=instance_id,
+                                        UserId=member['MemberId']['UserId']
+                                    )
+                                    # okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}']['user'].add(member['MemberId']['UserId'])
+                                    okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}'].append({'first_name': user_desc['Name']['GivenName'], 'last_name': user_desc['Name']['FamilyName'], 'email': user_desc['Emails'][0]['Value'], 'user_name': user_desc['Emails'][0]['Value']})
+                        else:
+                            # okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}']['user'].add(assignment['PrincipalId'])
+                            user_desc = identity_store_client.describe_user(
+                                IdentityStoreId=instance_id,
+                                UserId=assignment['PrincipalId']
+                            )
+                            okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}'].append({'first_name': user_desc['Name']['GivenName'], 'last_name': user_desc['Name']['FamilyName'], 'email': user_desc['Emails'][0]['Value'], 'user_name': user_desc['Emails'][0]['Value']})
+
+                
+                        
                   
             upload_custom_policy_to_s3(permission_sets_arns, bucket_name, account_id, sso_admin_client, instance_arn)
 
@@ -61,5 +102,6 @@ for account_id in account_ids:
     bucket_key = account_id + '/' + 'data.csv'
     # upload_file_s3(filename, bucket_name, bucket_key)
 
-
+print(okta_group_role_map)
+generate_locals_tf(okta_group_role_map)
 create_config_json(permission_sets_map, account_ids)
