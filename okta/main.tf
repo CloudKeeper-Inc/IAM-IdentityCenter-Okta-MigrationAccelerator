@@ -43,7 +43,7 @@ resource "okta_app_saml_app_settings" "applications_setting" {
       "sessionDuration" : 3600
       "appFilter" : "okta"
       "useGroupMapping" : true
-      "groupFilter" : "^aws\\#(?{{role}}[\\w\\-]+)\\#(?{{accountid}}\\d+)$"
+      "groupFilter" : "^aws\\#\\S+\\#(?{{role}}[\\w\\-]+)\\#(?{{accountid}}\\d+)$"
       "roleValuePattern" : "arn:aws:iam::$${accountid}:saml-provider/Okta-IdP,arn:aws:iam::$${accountid}:role/$${role}"
       "webSSOAllowedClient" : "${okta_app_oauth.app.client_id}"
     }
