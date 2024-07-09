@@ -10,7 +10,7 @@ import os
 bucket_name = ""#os.environ['SSO_DATA_BUCKET']
 region = 'eu-west-1'
 
-    
+
 s3_client = boto3.client('s3', region_name = region)
 
 org_client = boto3.client('organizations', region_name = region)
@@ -59,14 +59,10 @@ for account_id in account_ids:
                     MaxResults=100,
                     PermissionSetArn=permission_sets_names[name]
                 )
+
                 if len(response) > 1:
                     for assignment in response['AccountAssignments']:
-                        if f'aws#{name}#{assignment["AccountId"]}' not in okta_group_role_map: 
-                            # okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}'] = {'group': [], 'user': set(), 'account_id': ''}
-                            okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}'] = []
-                        # okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}']['account_id'] = assignment['AccountId']
                         if assignment['PrincipalType'] == 'GROUP':
-                            # okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}']['group'].append(assignment['PrincipalId'])
                             group_memberships = identity_store_client.list_group_memberships(
                                 IdentityStoreId=instance_id,
                                 GroupId=assignment['PrincipalId'],
@@ -78,15 +74,17 @@ for account_id in account_ids:
                                         IdentityStoreId=instance_id,
                                         UserId=member['MemberId']['UserId']
                                     )
-                                    # okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}']['user'].add(member['MemberId']['UserId'])
-                                    okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}'].append({'first_name': user_desc['Name']['GivenName'], 'last_name': user_desc['Name']['FamilyName'], 'email': user_desc['Emails'][0]['Value'], 'user_name': user_desc['Emails'][0]['Value']})
+                                    if user_desc['Emails'][0]['Value'] not in okta_group_role_map:
+                                        okta_group_role_map[user_desc['Emails'][0]['Value']] = {'first_name': user_desc['Name']['GivenName'], 'last_name': user_desc['Name']['FamilyName'], 'groups': set()}
+                                    okta_group_role_map[user_desc['Emails'][0]['Value']]['groups'].add(f'aws#acc#{name}#{assignment["AccountId"]}')
                         else:
-                            # okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}']['user'].add(assignment['PrincipalId'])
                             user_desc = identity_store_client.describe_user(
                                 IdentityStoreId=instance_id,
                                 UserId=assignment['PrincipalId']
                             )
-                            okta_group_role_map[f'aws#{name}#{assignment["AccountId"]}'].append({'first_name': user_desc['Name']['GivenName'], 'last_name': user_desc['Name']['FamilyName'], 'email': user_desc['Emails'][0]['Value'], 'user_name': user_desc['Emails'][0]['Value']})
+                            if user_desc['Emails'][0]['Value'] not in okta_group_role_map:
+                                okta_group_role_map[user_desc['Emails'][0]['Value']] = {'first_name': user_desc['Name']['GivenName'], 'last_name': user_desc['Name']['FamilyName'], 'groups': set()}
+                            okta_group_role_map[user_desc['Emails'][0]['Value']]['groups'].add(f'aws#acc#{name}#{assignment["AccountId"]}')
 
                 
                         
@@ -102,6 +100,6 @@ for account_id in account_ids:
     bucket_key = account_id + '/' + 'data.csv'
     # upload_file_s3(filename, bucket_name, bucket_key)
 
-print(okta_group_role_map)
+# print(okta_group_role_map)
 generate_locals_tf(okta_group_role_map)
 create_config_json(permission_sets_map, account_ids)

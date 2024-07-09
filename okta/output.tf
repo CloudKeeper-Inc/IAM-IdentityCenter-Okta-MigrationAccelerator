@@ -2,14 +2,9 @@ output "client_id" {
   value = okta_app_oauth.app.client_id
 }
 
-output "users" {
-  value = { for idx, user in distinct(local.users) : user.email => user }
-}
-
-output "groups" {
-  value = toset(var.groups)
-}
-
-output "group_user_map" {
-  value = local.group_user_map
+output "gp" {
+  value = {
+    for user_key, user_value in local.users :
+    user_key => [for group in user_value.groups : okta_group.groups[group].id]
+  }
 }

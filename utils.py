@@ -66,17 +66,32 @@ def camelcase_changer(name):
 
 
 
+# def get_policy_arn(policy_name):
+#     iam_client = get_client('iam')
+    
+#     paginator = iam_client.get_paginator('list_policies')
+    
+#     for page in paginator.paginate(Scope='AWS'):
+#         for policy in page['Policies']:
+#             if policy['PolicyName'] == policy_name:
+#                 return policy['Arn']
+    
+#     return None
+
+
+
 def get_policy_arn(policy_name):
     iam_client = get_client('iam')
     
-    paginator = iam_client.get_paginator('list_policies')
+    try:
+        response = iam_client.get_policy(
+            PolicyArn=f'arn:aws:iam::aws:policy/{policy_name}'
+        )
+        arn = response['Policy']['Arn']
+    except:
+        arn = f'arn:aws:iam::aws:policy/job-function/{policy_name}'
     
-    for page in paginator.paginate(Scope='AWS'):
-        for policy in page['Policies']:
-            if policy['PolicyName'] == policy_name:
-                return policy['Arn']
-    
-    return None
+    return arn
 
 
 
@@ -193,23 +208,41 @@ def create_config_json(permission_sets_map, account_ids):
         json.dump(config, outfile, indent=4)
 
 
-def generate_locals_tf(data, file_path='okta/locals.tf'):
-    with open(file_path, 'w') as file:
-        file.write('locals {\n')
-        file.write('  aws_roles = {\n')
+# def generate_locals_tf(data, file_path='okta/locals.tf'):
+#     with open(file_path, 'w') as file:
+#         file.write('locals {\n')
+#         file.write('  aws_roles = {\n')
 
-        for key, value in data.items():
-            file.write(f'    "{key}" = ')
-            if isinstance(value, list) and value:
-                file.write('[\n')
-                for item in value:
-                    file.write('      {\n')
-                    for sub_key, sub_value in item.items():
-                        file.write(f'        {sub_key} = "{sub_value}"\n')
-                    file.write('      },\n')
-                file.write('    ]\n')
-            else:
-                file.write('[]\n')
+#         for key, value in data.items():
+#             file.write(f'    "{key}" = ')
+#             if isinstance(value, list) and value:
+#                 file.write('[\n')
+#                 for item in value:
+#                     file.write('      {\n')
+#                     for sub_key, sub_value in item.items():
+#                         file.write(f'        {sub_key} = "{sub_value}"\n')
+#                     file.write('      },\n')
+#                 file.write('    ]\n')
+#             else:
+#                 file.write('[]\n')
         
-        file.write('  }\n')
-        file.write('}\n')
+#         file.write('  }\n')
+#         file.write('}\n')
+
+
+
+def generate_locals_tf(data, file_path='okta/locals.tf'):
+    with open(file_path, "w") as file:
+        file.write("locals {\n")
+        file.write("  users = {\n")
+        for email, details in data.items():
+            file.write(f'    "{email}" = {{\n')
+            file.write(f'      first_name = "{details["first_name"]}"\n')
+            file.write(f'      last_name = "{details["last_name"]}"\n')
+            file.write(f'      groups = [\n')
+            for group in details['groups']:
+                file.write(f'        "{group}",\n')
+            file.write(f'      ]\n')
+            file.write(f'    }}\n')
+        file.write("  }\n")
+        file.write("}\n")

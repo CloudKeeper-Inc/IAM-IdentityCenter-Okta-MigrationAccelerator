@@ -61,12 +61,12 @@ resource "okta_group" "groups" {
 }
 
 resource "okta_user" "users" {
-  for_each = { for idx, user in distinct(local.users) : user.email => user }
+  for_each = local.users
   
   first_name = each.value.first_name
   last_name  = each.value.last_name
-  login      = each.value.user_name
-  email      = each.value.email
+  login      = each.key
+  email      = each.key
 }
 
 resource "okta_app_group_assignment" "assignment" {
@@ -76,31 +76,15 @@ resource "okta_app_group_assignment" "assignment" {
   app_id     = okta_app_saml.application.id
 }
 
-# resource "okta_user_group_memberships" "user_group_assignment" {
-#   for_each = distinct(local.users)
 
-#   user_id = okta_user[each.value.email]
-#   groups  = [okta_group.groups[''].id]
-# }
+resource "okta_user_group_memberships" "user_group_assignment" {
+  for_each = local.users
 
-# resource "okta_user_group_memberships" "user_group_assignment" {
-#   for_each = {for group, user in local.group_user_map : }
+  user_id = okta_user.users[each.key].id
+  groups = [for group in each.value.groups : okta_group.groups[group].id]
 
-#   user_id = okta_user[each.value.email]
-#   groups  = [okta_group.groups[''].id]
-# }
-
-# resource "okta_user_group_memberships" "user_group_assignment" {
-#   for_each = {
-#     for group, users in local.group_user_map :
-#     group => [
-#       for user in users : okta_user.users[user.email].id
-#     ]
-#   }
-
-#   user_id = each.value
-#   groups  = [okta_group.groups[each.key].id]
-# }
+  depends_on = [ okta_user.users, okta_group.groups, okta_app_group_assignment.assignment ]
+}
 
 
 resource "okta_app_oauth" "app" {
