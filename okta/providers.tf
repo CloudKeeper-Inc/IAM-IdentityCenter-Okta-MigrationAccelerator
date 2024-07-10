@@ -13,8 +13,8 @@ terraform {
 
 
 provider "okta" {
-  org_name        = "trial-5429278995"
+  org_name        = "org_name"              #Replace org_name with name of your Okta organization name
   base_url        = "okta.com"
-  api_token       = "123000991b8TImzBtkbTinszkgLM3GqM0LUIxGK089UPGaahdiusahduahfaqzKO"
-  request_timeout = 30
+  api_token       = "api_token"             #Replace api_token with your Okta API token
+  request_timeout = 300
 }

@@ -18,12 +18,6 @@ variable "policy" {
     policy_json = string
   }))
   default = {
-    dev-dba-policy = {
-      name        = "dev-rds-full-access-policy"
-      path        = "/"
-      description = "Dev Account: RDS full access for DBAs"
-      policy_json = "customer-managed-policy-json/policy-dev-dba.json"
-    }
   }
 }
 
@@ -33,16 +27,7 @@ variable "role" {
     name                    = string
     # assume_role_policy_json = string
   }))
-  default = {
-    idp-admin-role = {
-      name                    = "dev-admin-idp-role"
-      assume_role_policy_json = "trust-relation-json/assume-role-dev-admin-policy.json"
-    }
-    idp-dba-role = {
-      name                    = "dev-dba-idp-role"
-      assume_role_policy_json = "trust-relation-json/assume-role-dev-dba-policy.json"
-    }
-  }
+  default = {}
 }
 
 variable "inline_policies" {
@@ -51,18 +36,7 @@ variable "inline_policies" {
     name   = string
     policy = string
   })))
-  default = {
-    idp-dba-role = [
-      {
-        name   = "example-full-access-policy"
-        policy = "inline-policy-json/inline-policy-dev-dba.json"
-      },
-      {
-        name   = "example-jit-policy"
-        policy = "inline-policy-json/inline-policy-dev-jit.json"
-      }
-    ]
-  }
+  default = {}
 }
 
 variable "role_aws_managed_policy" {

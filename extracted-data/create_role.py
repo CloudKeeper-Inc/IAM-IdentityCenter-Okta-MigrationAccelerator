@@ -43,7 +43,7 @@
 #             metadata = metadata.read()
 #             response = iam_client.create_saml_provider(
 #                 Name=idp_name, SAMLMetadataDocument=metadata)
-#             print("Created IdP", idp_name)
+#             print("Created IdP", idp_name)ResourceNotFoundException
 
 
 # print('Creating Roles -')

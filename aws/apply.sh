@@ -28,4 +28,4 @@ if [ ! -f "$TFVARS_FILE" ]; then
 fi
 
 # Apply Terraform with the matching .tfvars file
-terraform apply -auto-approve -var-file="$TFVARS_FILE" > output.txt
+terraform apply -auto-approve -var-file="$TFVARS_FILE"

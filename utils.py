@@ -29,7 +29,8 @@ def upload_account_ids_to_s3(account_ids, bucket_name):
 def get_sso_instance_arn(client):
     instance_info = client.list_instances()
     instance_arn = instance_info['Instances'][0]['InstanceArn']
-    return instance_arn
+    instance_id = instance_info['Instances'][0]['IdentityStoreId']
+    return instance_arn, instance_id
 
 
 def underscore_remover(name):
@@ -86,7 +87,6 @@ def get_sso_account_data(permission_sets_arns, account, client, instance_arn):
 
         permission_set_description = client.describe_permission_set(InstanceArn=instance_arn, PermissionSetArn=permission_set_arn)
         permission_set_name = permission_set_description['PermissionSet']['Name']
-        # permission_set_name = camelcase_changer(underscore_remover(permission_set_description['PermissionSet']['Name']))
         managed_policies = client.list_managed_policies_in_permission_set(InstanceArn=instance_arn, PermissionSetArn=permission_set_arn)
         customer_managed_policies = client.list_customer_managed_policy_references_in_permission_set(InstanceArn=instance_arn, PermissionSetArn=permission_set_arn)
         inline_policy = client.get_inline_policy_for_permission_set(InstanceArn=instance_arn, PermissionSetArn=permission_set_arn)
@@ -95,7 +95,6 @@ def get_sso_account_data(permission_sets_arns, account, client, instance_arn):
         customer_managed_policy =[]
 
         for policy in managed_policies['AttachedManagedPolicies']:
-            # aws_managed_policy.append(policy['Name'])
             arn = get_policy_arn(policy['Name'])
             aws_managed_policy.append(arn)
 
@@ -124,23 +123,21 @@ def upload_custom_policy_to_s3(permission_sets_arns, bucket_name , account_id, c
         if len(custom_policy['InlinePolicy'])>0:
             permission_set_description = client.describe_permission_set(InstanceArn = instance_arn, PermissionSetArn= permission_set_arn)
             permission_set_name = permission_set_description['PermissionSet']['Name']
-            # permission_set_name = camelcase_changer(underscore_remover(permission_set_description['PermissionSet']['Name']))
             file_name = 'aws/inline-policy-json/' + permission_set_name + '.json'
             bucket_key = foldername + '/' + permission_set_name + '.json'
             with open(file_name, 'w') as outfile:
                 outfile.write(custom_policy['InlinePolicy'])
-            # upload_file_s3(file_name, bucket_name, bucket_key)
 
 
 
 def permission_sets_name(client, permission_sets_arns, instance_arn):
-    permission_sets = []
+    permission_sets = {}
     for permission_set in permission_sets_arns:
         response = client.describe_permission_set(
             InstanceArn=instance_arn,
             PermissionSetArn=permission_set
         )
-        permission_sets.append(response['PermissionSet']['Name'])
+        permission_sets[response['PermissionSet']['Name']] = permission_set
 
     return permission_sets
 
@@ -187,6 +184,24 @@ def create_config_json(permission_sets_map, account_ids):
     config = config.replace("'",'"')
 
     config = json.loads(config)
-    file_name = 'extracted-data/' + 'config' + '.json'
+    file_name = 'config' + '.json'
     with open(file_name, 'w') as outfile:
         json.dump(config, outfile, indent=4)
+
+
+
+def generate_locals_tf(data, file_path='okta/locals.tf'):
+    with open(file_path, "w") as file:
+        file.write("locals {\n")
+        file.write("  users = {\n")
+        for email, details in data.items():
+            file.write(f'    "{email}" = {{\n')
+            file.write(f'      first_name = "{details["first_name"]}"\n')
+            file.write(f'      last_name = "{details["last_name"]}"\n')
+            file.write(f'      groups = [\n')
+            for group in details['groups']:
+                file.write(f'        "{group}",\n')
+            file.write(f'      ]\n')
+            file.write(f'    }}\n')
+        file.write("  }\n")
+        file.write("}\n")

@@ -43,7 +43,7 @@ resource "okta_app_saml_app_settings" "applications_setting" {
       "sessionDuration" : 3600
       "appFilter" : "okta"
       "useGroupMapping" : true
-      "groupFilter" : "^aws\\#(?{{role}}[\\w\\-]+)\\#(?{{accountid}}\\d+)$"
+      "groupFilter" : "^aws\\#\\S+\\#(?{{role}}[\\w\\-]+)\\#(?{{accountid}}\\d+)$"
       "roleValuePattern" : "arn:aws:iam::$${accountid}:saml-provider/Okta-IdP,arn:aws:iam::$${accountid}:role/$${role}"
       "webSSOAllowedClient" : "${okta_app_oauth.app.client_id}"
     }
@@ -60,12 +60,32 @@ resource "okta_group" "groups" {
   name     = each.key
 }
 
+resource "okta_user" "users" {
+  for_each = local.users
+  
+  first_name = each.value.first_name
+  last_name  = each.value.last_name
+  login      = each.key
+  email      = each.key
+}
+
 resource "okta_app_group_assignment" "assignment" {
   depends_on = [okta_group.groups]
   for_each   = okta_group.groups
   group_id   = each.value.id
   app_id     = okta_app_saml.application.id
 }
+
+
+resource "okta_user_group_memberships" "user_group_assignment" {
+  for_each = local.users
+
+  user_id = okta_user.users[each.key].id
+  groups = [for group in each.value.groups : okta_group.groups[group].id]
+
+  depends_on = [ okta_user.users, okta_group.groups, okta_app_group_assignment.assignment ]
+}
+
 
 resource "okta_app_oauth" "app" {
   consent_method                  =  var.consent_method
