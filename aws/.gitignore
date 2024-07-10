@@ -2,3 +2,6 @@
 .terraform.lock.hcl
 *.xml
 terraform.tfstate
+*.tfvars
+*.txt
+terraform.tfstate*

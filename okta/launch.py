@@ -6,7 +6,7 @@ with open('../config.json') as f:
     account_nos = data.get("account_no", [])
 
 def generate_group_config(role_name, account_id):
-    return f'"aws#{role_name}#{account_id}",'
+    return f'"aws#acc#{role_name}#{account_id}",'
 
 # Initialize Terraform configuration
 terraform_config = 'application = "AWS Account Federated Access"\n'
@@ -22,8 +22,8 @@ terraform_config += ']\n\n'
 terraform_config += 'consent_method                  =   "REQUIRED"\n'
 terraform_config += 'grant_types                     =   ["authorization_code", "urn:ietf:params:oauth:grant-type:device_code", "urn:ietf:params:oauth:grant-type:token-exchange"] \n'
 terraform_config += 'type                            =   "native"\n'
-terraform_config += 'redirect_uris                   =   ["com.okta.trial-1771640:/"] \n'
-terraform_config += 'post_logout_redirect_uris       =   ["com.okta.trial-1771640:/callback"] \n'
+terraform_config += 'redirect_uris                   =   ["com.okta.org_name:/"] \n'            #Replace org_name with name of your Okta organization name
+terraform_config += 'post_logout_redirect_uris       =   ["com.okta.org_name:/callback"] \n'    #Replace org_name with name of your Okta organization name
 terraform_config += 'issuer_mode                     =    "DYNAMIC"\n'
 terraform_config += 'label                           =    "cli-access-app"\n'
 terraform_config += 'response_types                  =    ["code"] \n'
