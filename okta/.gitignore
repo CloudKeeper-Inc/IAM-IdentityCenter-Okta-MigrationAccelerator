@@ -3,4 +3,3 @@
 *.xml
 terraform.tfstate*
 terraform.tfvars
-locals.tf
