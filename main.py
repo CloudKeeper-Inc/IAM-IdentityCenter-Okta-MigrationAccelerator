@@ -108,7 +108,7 @@ create_config_json(permission_sets_map, account_ids)
 print('AWS SSO data extraction completed...\n')
 
 choice = ''
-while choice != 'y' or choice != 'Y':
+while choice.lower() != 'y':
     choice = input('Insert customer managed policy jsons inside "aws/customer-managed-policy-json" directory...\n\tJson nomenclature: <customer-managed-policy-name>_sso.json\n\tOnce done enter y or Y...')
 
 print('\nCreating resources...\n')
