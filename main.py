@@ -14,7 +14,7 @@ region = input("\nEnter the AWS region where your IAM Identity Center is running
 print('Selected region:', region)
 print('\nPlease wait while the script is running...\n')
 
-org_client = boto3.client('organizations', region_name = region)
+org_client = boto3.client('organizations', region_name = 'us-east-1')
 account_ids = get_account_list(org_client)
 
 sso_admin_client = boto3.client('sso-admin', region_name = region)
