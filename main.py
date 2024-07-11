@@ -9,7 +9,10 @@ from botocore.exceptions import ClientError
 # sso_acc_role_arn = 'arn:aws:iam::'+master_account_id+':role/AWS-SSO-Read-Only-Role'
 # bucket_name = 'bucket-for-sso-data'
 bucket_name = ""#os.environ['SSO_DATA_BUCKET']
-region = 'us-east-1'
+
+region = input("\nEnter the AWS region where your IAM Identity Center is running(eg. us-east-1): ")
+print('Selected region:', region)
+print('\nPlease wait while the script is running...\n')
 
 org_client = boto3.client('organizations', region_name = region)
 account_ids = get_account_list(org_client)
@@ -101,3 +104,14 @@ for account_id in account_ids:
 
 generate_locals_tf(okta_group_role_map)
 create_config_json(permission_sets_map, account_ids)
+
+print('AWS SSO data extraction completed...\n')
+
+choice = ''
+while choice.lower() != 'y':
+    choice = input('Insert customer managed policy jsons inside "aws/customer-managed-policy-json" directory...\n\tJson nomenclature: <customer-managed-policy-name>_sso.json\n\tOnce done enter y or Y...')
+
+print('\nCreating resources...\n')
+os.system('./launch.sh')
+
+print('\nExecution Finished...\n')

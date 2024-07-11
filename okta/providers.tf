@@ -1,3 +1,4 @@
+
 terraform {
   required_providers {
     okta = {
@@ -11,10 +12,9 @@ terraform {
   }
 }
 
-
 provider "okta" {
-  org_name        = "org_name"              #Replace org_name with name of your Okta organization name
+  org_name        = "org_name"             
   base_url        = "okta.com"
-  api_token       = "api_token"             #Replace api_token with your Okta API token
+  api_token       = "api_token"            
   request_timeout = 300
 }

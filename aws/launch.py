@@ -1,7 +1,6 @@
 import json
 import os
 import subprocess
-import random
 
 with open('../config.json') as f:
     data = json.load(f)
@@ -179,7 +178,6 @@ for account_id in account_nos:
     # Check if a .tfvars file exists for the current workspace
     if not os.path.isfile(tfvars_file):
         print(f"Error: Terraform .tfvars file '{tfvars_file}' not found for workspace '{workspace_name}'")
-        exit(1)
-
-    # Apply Terraform with the matching .tfvars file
-    subprocess.run(["terraform", "apply", "-auto-approve","-var-file=" + tfvars_file], check=True)
+    else:
+        # Apply Terraform with the matching .tfvars file
+        subprocess.run(["terraform", "apply", "-auto-approve","-var-file=" + tfvars_file], check=True)

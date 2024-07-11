@@ -99,14 +99,14 @@ def get_sso_account_data(permission_sets_arns, account, client, instance_arn):
             aws_managed_policy.append(arn)
 
         for policy in customer_managed_policies['CustomerManagedPolicyReferences']:
-            customer_managed_policy.append(policy['Name'])
+            customer_managed_policy.append(f'{policy["Name"]}_sso')
 
         if len(inline_policy['InlinePolicy'])>0:
             inline_policy_status = permission_set_name + '.json'
 
         sso_data = {}
         sso_data.update({'Saml_Provider_Name': 'aws-sso-'+ permission_set_name+'-'+ account+'-'+'DONOTDELETE'})
-        sso_data.update({'Role_Name': permission_set_name})
+        sso_data.update({'Role_Name': f'{permission_set_name}_sso'})
         sso_data.update({'Attached_Managed_Policies': aws_managed_policy})
         sso_data.update({'Customer_Managed_Policies': customer_managed_policy})
         sso_data.update({'Inline_Policy': inline_policy_status})
@@ -137,7 +137,7 @@ def permission_sets_name(client, permission_sets_arns, instance_arn):
             InstanceArn=instance_arn,
             PermissionSetArn=permission_set
         )
-        permission_sets[response['PermissionSet']['Name']] = permission_set
+        permission_sets[f'{response["PermissionSet"]["Name"]}_sso'] = permission_set
 
     return permission_sets
 
@@ -205,3 +205,4 @@ def generate_locals_tf(data, file_path='okta/locals.tf'):
             file.write(f'    }}\n')
         file.write("  }\n")
         file.write("}\n")
+
