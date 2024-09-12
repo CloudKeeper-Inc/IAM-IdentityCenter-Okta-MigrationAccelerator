@@ -1,7 +1,6 @@
-import json, boto3, csv, os
+import boto3, csv, os
 from utils import *
 from client import *
-import os
 from botocore.exceptions import ClientError
 
 # bucket_name = os.environ['bucket_name']
@@ -38,7 +37,7 @@ for account_id in account_ids:
     for ps in ps_response_iterator:
         permission_sets.extend(ps.get('PermissionSets', []))
 
-    if len(permission_sets) > 1:
+    if len(permission_sets) > 0:
             sso_data = get_sso_account_data(permission_sets, account_id, sso_admin_client, instance_arn)
 
             permission_sets_names = permission_sets_name(sso_admin_client, permission_sets, instance_arn)
@@ -64,7 +63,7 @@ for account_id in account_ids:
                 for assignment in account_assignment_iterator:
                     account_assignments.extend(assignment.get('AccountAssignments', []))
 
-                if len(account_assignments) > 1:
+                if len(account_assignments) > 0:
                     for assignment in account_assignments:
                         if assignment['PrincipalType'] == 'GROUP':
                             group_memberships = identity_store_client.list_group_memberships(
@@ -72,7 +71,7 @@ for account_id in account_ids:
                                 GroupId=assignment['PrincipalId'],
                                 MaxResults=100
                             )
-                            if len(group_memberships) > 1:
+                            if len(group_memberships) > 0:
                                 for member in group_memberships['GroupMemberships']:
                                     try:
                                         user_desc = identity_store_client.describe_user(
