@@ -43,6 +43,8 @@ for account_id in account_ids:
 
             permission_sets_names = permission_sets_name(sso_admin_client, permission_sets, instance_arn)
 
+            upload_custom_policy_to_s3(permission_sets, None , account_id, sso_admin_client, instance_arn)
+
             for name in permission_sets_names:
                 if name not in permission_sets_map:
                     permission_sets_map[name] = {"account_id": [], "Attached_Managed_Policies": [], "Customer_Managed_Policies": [], "Inline_Policy": ''}
