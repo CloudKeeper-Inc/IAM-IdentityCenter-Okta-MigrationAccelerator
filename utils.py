@@ -80,7 +80,7 @@ def get_policy_arn(policy_name):
 
 
 
-def get_sso_account_data(permission_sets_arns, account, client, instance_arn):
+def get_sso_account_data(permission_sets_arns, account, client, instance_arn, session):
     sso_info_list=[]
     for permission_set_arn in permission_sets_arns:
         inline_policy_status = 'No'
@@ -100,6 +100,7 @@ def get_sso_account_data(permission_sets_arns, account, client, instance_arn):
 
         for policy in customer_managed_policies['CustomerManagedPolicyReferences']:
             customer_managed_policy.append(f'{policy["Name"]}_sso')
+            get_managed_policy_json(session, policy["Name"])
 
         if len(inline_policy['InlinePolicy'])>0:
             inline_policy_status = permission_set_name + '.json'
@@ -152,6 +153,43 @@ def convert_to_policy_dicts(policy_names):
         }
         policy_dicts.append(policy_dict)
     return policy_dicts
+
+
+
+def get_managed_policy_json(session, policy_name):
+    iam_client = session.client('iam')
+
+    try:
+        paginator = iam_client.get_paginator('list_policies')
+        policy_arn = None
+
+        for page in paginator.paginate(Scope='Local'):
+            for policy in page['Policies']:
+                if policy['PolicyName'] == policy_name:
+                    policy_arn = policy['Arn']
+                    break
+            if policy_arn:
+                break
+
+        if not policy_arn:
+            return f"Customer-managed policy {policy_name} not found."
+
+        policy = iam_client.get_policy(PolicyArn=policy_arn)
+
+        policy_version = iam_client.get_policy_version(
+            PolicyArn=policy_arn,
+            VersionId=policy['Policy']['DefaultVersionId']
+        )
+
+        policy_document = policy_version['PolicyVersion']['Document']
+
+        file_name = 'aws/customer-managed-policy-json/' + f'{policy_name}_sso' + '.json'
+
+        with open(file_name, 'w') as json_file:
+            json.dump(policy_document, json_file, indent=4)
+
+    except Exception as e:
+        print(f"Error retrieving policy JSON: {str(e)}")
 
 
 

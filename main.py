@@ -31,6 +31,7 @@ permission_sets_map = {}
 okta_group_role_map = {}
 
 for account_id in account_ids:
+    session = boto3.Session(profile_name=str(account_id))
     sso_data = []
     ps_response_iterator = ps_paginator.paginate(InstanceArn=instance_arn, AccountId=account_id)
     permission_sets = []
@@ -38,7 +39,7 @@ for account_id in account_ids:
         permission_sets.extend(ps.get('PermissionSets', []))
 
     if len(permission_sets) > 0:
-            sso_data = get_sso_account_data(permission_sets, account_id, sso_admin_client, instance_arn)
+            sso_data = get_sso_account_data(permission_sets, account_id, sso_admin_client, instance_arn, session)
 
             permission_sets_names = permission_sets_name(sso_admin_client, permission_sets, instance_arn)
 
@@ -110,7 +111,7 @@ print('AWS SSO data extraction completed...\n')
 
 choice = ''
 while choice.lower() != 'y':
-    choice = input('Insert customer managed policy jsons inside "aws/customer-managed-policy-json" directory...\n\tJson nomenclature: <customer-managed-policy-name>_sso.json\n\tOnce done enter y or Y...')
+    choice = input('Enter y or Y to proceed with creation of resources...')
 
 print('\nCreating resources...\n')
 os.system('./launch.sh')
